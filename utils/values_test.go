@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/ionos-cloud/v8go"
+	"github.com/nzhenev/v8go"
 	"github.com/stretchr/testify/assert"
 )
 

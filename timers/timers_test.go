@@ -3,7 +3,7 @@ package timers
 import (
 	"testing"
 
-	v8 "github.com/ionos-cloud/v8go"
+	v8 "github.com/nzhenev/v8go"
 	"github.com/stretchr/testify/assert"
 )
 

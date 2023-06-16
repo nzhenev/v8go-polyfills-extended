@@ -6,7 +6,7 @@ import (
 
 	"github.com/nzhenev/v8go-polyfills-extended/utils"
 
-	v8 "github.com/ionos-cloud/v8go"
+	v8 "github.com/nzhenev/v8go"
 )
 
 // Timers ...

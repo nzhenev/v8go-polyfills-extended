@@ -3,7 +3,7 @@ package listener
 import (
 	"fmt"
 
-	v8 "github.com/ionos-cloud/v8go"
+	v8 "github.com/nzhenev/v8go"
 )
 
 // Option ...
