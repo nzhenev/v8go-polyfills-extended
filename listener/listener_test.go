@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	v8 "github.com/nzhenev/v8go"
+	v8 "github.com/esoptra/v8go"
 )
 
 func BenchmarkEventListenerCall(b *testing.B) {

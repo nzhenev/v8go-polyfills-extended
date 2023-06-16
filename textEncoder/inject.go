@@ -25,7 +25,7 @@ package textEncoder
 import (
 	"fmt"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 )
 
 // uses encode func to create encodeinto wrapper method

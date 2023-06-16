@@ -123,6 +123,8 @@ github.com/envoyproxy/go-control-plane v0.9.9-0.20201210154907-fd9021fe5dad/go.m
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/esimonov/ifshort v1.0.4 h1:6SID4yGWfRae/M7hkVDVVyppy8q/v9OuxNdmjLQStBA=
 github.com/esimonov/ifshort v1.0.4/go.mod h1:Pe8zjlRrJ80+q2CxHLfEOfTwxCZ4O+MuhcHcfgNWTk0=
+github.com/esoptra/v8go v0.7.0 h1:ZFSErmiAKHAgT606/Vu6FpIfYKHaCWjNvaPkj9tuRMc=
+github.com/esoptra/v8go v0.7.0/go.mod h1:r6W6j/2pVSOqdS1oITIQIKo6AuTbhYYhREWPDUqUu6A=
 github.com/ettle/strcase v0.1.1 h1:htFueZyVeE1XNnMEfbqp5r67qAN/4r6ya1ysq8Q+Zcw=
 github.com/ettle/strcase v0.1.1/go.mod h1:hzDLsPC7/lwKyBOywSHEP89nt2pDgdy+No1NBA9o9VY=
 github.com/fatih/color v1.14.1 h1:qfhVLaG5s+nCROl1zJsZRxFeYrHLqWroPOQ8BWiNb4w=
@@ -401,8 +403,6 @@ github.com/nishanths/predeclared v0.2.2 h1:V2EPdZPliZymNAn79T8RkNApBjMmVKh5XRpLm
 github.com/nishanths/predeclared v0.2.2/go.mod h1:RROzoN6TnGQupbC+lqggsOlcgysk3LMK/HI84Mp280c=
 github.com/nunnatsa/ginkgolinter v0.8.1 h1:/y4o/0hV+ruUHj4xXh89xlFjoaitnI4LnkpuYs02q1c=
 github.com/nunnatsa/ginkgolinter v0.8.1/go.mod h1:FYYLtszIdmzCH8XMaMPyxPVXZ7VCaIm55bA+gugx+14=
-github.com/nzhenev/v8go v0.1.3 h1:K+9RORCvtJQT9ceH44wbf1LjHrYQS8j6ALg0J7QnN/k=
-github.com/nzhenev/v8go v0.1.3/go.mod h1:tKaEa9xi8tWO5rkPP7Tm9Isg+TUTpQjwKBZeUakUMsY=
 github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N7AbDhec=
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
 github.com/onsi/ginkgo/v2 v2.8.0 h1:pAM+oBNPrpXRs+E/8spkeGx9QgekbRVyr74EUvRVOUI=

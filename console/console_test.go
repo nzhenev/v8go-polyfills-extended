@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 )
 
 func TestInject(t *testing.T) {

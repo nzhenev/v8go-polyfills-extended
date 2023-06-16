@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 	"github.com/nzhenev/v8go-polyfills-extended/console"
 )
 

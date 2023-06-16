@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 	"github.com/stretchr/testify/assert"
 )
 

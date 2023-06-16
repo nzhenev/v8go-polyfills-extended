@@ -25,7 +25,7 @@ package timers
 import (
 	"errors"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 	"github.com/nzhenev/v8go-polyfills-extended/timers/internal"
 )
 

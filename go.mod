@@ -1,11 +1,13 @@
 module github.com/nzhenev/v8go-polyfills-extended
 
-go 1.20
+go 1.19
+
+// replace github.com/esoptra/v8go v0.9.0 => github.com/esoptra/v8go v0.7.0
 
 require (
+	github.com/esoptra/v8go v0.7.0
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.51.2
-	github.com/nzhenev/v8go v0.1.3
 	github.com/stretchr/testify v1.8.4
 	mvdan.cc/gofumpt v0.4.0
 )

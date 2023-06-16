@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 	"github.com/nzhenev/v8go-polyfills-extended/console"
 )
 
@@ -42,7 +42,7 @@ func TestInject(t *testing.T) {
 
 	ok := val.IsArrayBuffer()
 	if ok {
-		bytes := val.ArrayBuffer().GetBytes()
+		bytes := []byte(val.String())
 		fmt.Println("returned val is array", bytes)
 	} else {
 		fmt.Println("returned val is not array", val.Object().Value)

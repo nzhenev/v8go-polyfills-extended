@@ -7,7 +7,7 @@ import (
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 )
 
 type Decoder struct {
@@ -86,7 +86,7 @@ func (c *Decoder) TextDecoderFunctionCallback() v8go.FunctionCallback {
 
 				return iso.ThrowException(strErr)
 			}
-			s := args[0].Uint8Array()
+			s := []byte(args[0].String())
 			result := ""
 
 			dec, err := getDecoder(label)

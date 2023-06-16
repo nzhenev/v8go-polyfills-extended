@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 	"github.com/nzhenev/v8go-polyfills-extended/uuid"
 )
 
@@ -121,9 +121,9 @@ func (c *Crypto) cryptoVerifyFunctionCallback() v8go.FunctionCallback {
 				hasher := hash.New()
 
 				// According to documentation, Write() on hash never fails
-				_, _ = hasher.Write(payload)
+				_, _ = hasher.Write([]byte(payload.String()))
 				hashed := hasher.Sum(nil)
-				err = rsa.VerifyPKCS1v15(rsaKey, hash, hashed, sign)
+				err = rsa.VerifyPKCS1v15(rsaKey, hash, hashed, []byte(sign.String()))
 				passed = (err == nil)
 			}
 

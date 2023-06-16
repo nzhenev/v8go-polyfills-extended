@@ -25,7 +25,7 @@ package textEncoder
 import (
 	"fmt"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 )
 
 type Encoder struct {
@@ -78,14 +78,14 @@ func (c *Encoder) TextEncoderFunctionCallback() v8go.FunctionCallback {
 				return iso.ThrowException(strErr)
 			}
 
-			outArray := args[1].ArrayBuffer()
+			// outArray := []byte(args[1].String())
 			result := make([]uint8, len(s)*3)
 			i := 0
 			for ; i < len(s); i++ {
 				fmt.Printf("%d ", s[i])
 				result[i] = s[i]
 			}
-			outArray.PutBytes(result[:i])
+			// outArray.PutBytes(result[:i])
 			obj := info.Context().Global() // create object
 			obj.Set("read", int32(i))      // set some properties
 			obj.Set("written", int32(len(result[:i])))

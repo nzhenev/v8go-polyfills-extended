@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/nzhenev/v8go"
+import "github.com/esoptra/v8go"
 
 // NewInt32Value ...
 func NewInt32Value(ctx *v8go.Context, i int32) (*v8go.Value, error) {

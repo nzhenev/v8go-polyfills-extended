@@ -3,7 +3,7 @@ package timers
 import (
 	"fmt"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 )
 
 func InjectTo(iso *v8go.Isolate, global *v8go.ObjectTemplate) error {

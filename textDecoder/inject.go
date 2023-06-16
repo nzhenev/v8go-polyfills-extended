@@ -25,7 +25,7 @@ package textDecoder
 import (
 	"fmt"
 
-	"github.com/nzhenev/v8go"
+	"github.com/esoptra/v8go"
 )
 
 func InjectWith(iso *v8go.Isolate, global *v8go.ObjectTemplate, opt ...Option) error {
