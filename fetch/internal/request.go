@@ -24,6 +24,7 @@ package internal
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,8 +37,8 @@ const (
 )
 
 /*
-RequestInit is the fetch API defined object.
-Only supports raw request now.
+ RequestInit is the fetch API defined object.
+ Only supports raw request now.
 */
 type RequestInit struct {
 	Body     string            `json:"body"`
@@ -46,11 +47,19 @@ type RequestInit struct {
 	Redirect string            `json:"redirect"`
 }
 
+type JSRequestInit struct {
+	Url      string            `json:"url,omitempty"`
+	Body     string            `json:"body,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty"`
+	Method   string            `json:"method,omitempty"`
+	Redirect string            `json:"redirect,omitempty"`
+}
+
 /*
-Request is the request object used by fetch
+ Request is the request object used by fetch
 */
 type Request struct {
-	Body     string
+	Body     io.Reader
 	Method   string
 	Redirect string
 
@@ -60,7 +69,7 @@ type Request struct {
 }
 
 /*
-parse and check the request URL, return *url.URL
+ parse and check the request URL, return *url.URL
 */
 func ParseRequestURL(rawURL string) (*url.URL, error) {
 	u, err := url.Parse(rawURL)
@@ -75,7 +84,7 @@ func ParseRequestURL(rawURL string) (*url.URL, error) {
 	case "http", "https":
 	case "": // then scheme is empty, it's a local request
 		if !strings.HasPrefix(u.Path, "/") {
-			return nil, fmt.Errorf("unsupported relatve path %s", u.Path)
+			return nil, fmt.Errorf("unsupported relative path %s", u.Path)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported scheme %s", u.Scheme)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Xingwang Liao
+ * Copyright (c) 2021 Twintag
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,59 +20,14 @@
  * SOFTWARE.
  */
 
-package timers
+package textEncoder
 
-import (
-	"testing"
-	"time"
-
-	"github.com/nzhenev/v8go"
-	"github.com/nzhenev/v8go-polyfills-extended/console"
-)
-
-func Test_SetTimeout(t *testing.T) {
-	ctx, err := newV8ContextWithTimers()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if err := console.InjectTo(ctx); err != nil {
-		t.Error(err)
-		return
-	}
-
-	val, err := ctx.RunScript(`
-	console.log(new Date().toUTCString());
-
-	setTimeout(function() {
-		console.log("Hello v8go.");
-		console.log(new Date().toUTCString());
-	}, 2000)`, "set_timeout.js")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if !val.IsInt32() {
-		t.Errorf("except 1 but got %v", val)
-		return
-	}
-
-	if id := val.Int32(); id != 1 {
-		t.Errorf("except 1 but got %d", id)
-	}
-
-	time.Sleep(time.Second * 6)
+type Option interface {
+	apply(c *Encoder)
 }
 
-func newV8ContextWithTimers() (*v8go.Context, error) {
-	iso := v8go.NewIsolate()
-	global := v8go.NewObjectTemplate(iso)
+type optionFunc func(c *Encoder)
 
-	if err := InjectTo(iso, global); err != nil {
-		return nil, err
-	}
-
-	return v8go.NewContext(iso, global), nil
+func (f optionFunc) apply(c *Encoder) {
+	f(c)
 }

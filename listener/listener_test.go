@@ -24,7 +24,7 @@ func BenchmarkEventListenerCall(b *testing.B) {
 
 	ctx := v8.NewContext(iso, global)
 
-	if err := console.AddTo(ctx); err != nil {
+	if err := console.InjectTo(ctx); err != nil {
 		panic(err)
 	}
 

@@ -20,59 +20,59 @@
  * SOFTWARE.
  */
 
-package timers
+package internal
 
 import (
-	"testing"
 	"time"
-
-	"github.com/nzhenev/v8go"
-	"github.com/nzhenev/v8go-polyfills-extended/console"
 )
 
-func Test_SetTimeout(t *testing.T) {
-	ctx, err := newV8ContextWithTimers()
-	if err != nil {
-		t.Error(err)
-		return
-	}
+type FunctionCallback func()
 
-	if err := console.InjectTo(ctx); err != nil {
-		t.Error(err)
-		return
-	}
+type ClearCallback func(id int32)
 
-	val, err := ctx.RunScript(`
-	console.log(new Date().toUTCString());
+type Item struct {
+	ID       int32
+	Done     bool
+	Cleared  bool
+	Interval bool
+	Delay    int32
 
-	setTimeout(function() {
-		console.log("Hello v8go.");
-		console.log(new Date().toUTCString());
-	}, 2000)`, "set_timeout.js")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if !val.IsInt32() {
-		t.Errorf("except 1 but got %v", val)
-		return
-	}
-
-	if id := val.Int32(); id != 1 {
-		t.Errorf("except 1 but got %d", id)
-	}
-
-	time.Sleep(time.Second * 6)
+	ClearCB    ClearCallback
+	FunctionCB FunctionCallback
 }
 
-func newV8ContextWithTimers() (*v8go.Context, error) {
-	iso := v8go.NewIsolate()
-	global := v8go.NewObjectTemplate(iso)
+func (t *Item) Clear() {
+	if !t.Cleared {
+		t.Cleared = true
 
-	if err := InjectTo(iso, global); err != nil {
-		return nil, err
+		if t.ClearCB != nil {
+			t.ClearCB(t.ID)
+		}
 	}
 
-	return v8go.NewContext(iso, global), nil
+	t.Done = true
+}
+
+func (t *Item) Start() {
+	go func() {
+		defer t.Clear() // self clear
+
+		ticker := time.NewTicker(time.Duration(t.Delay) * time.Millisecond)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if t.Done {
+				break
+			}
+
+			if t.FunctionCB != nil {
+				t.FunctionCB()
+			}
+
+			if !t.Interval {
+				t.Done = true
+				break
+			}
+		}
+	}()
 }

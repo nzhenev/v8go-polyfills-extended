@@ -1,125 +1,164 @@
+/*
+ * Copyright (c) 2021 Xingwang Liao
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package timers
 
 import (
-	"fmt"
-	"sync"
+	"errors"
 
-	"github.com/nzhenev/v8go-polyfills-extended/utils"
-
-	v8 "github.com/nzhenev/v8go"
+	"github.com/nzhenev/v8go"
+	"github.com/nzhenev/v8go-polyfills-extended/timers/internal"
 )
 
-// Timers ...
-type Timers struct {
-	tt            map[int32]*Timer
-	nextTimeoutID int32
+type Timers interface {
+	GetSetTimeoutFunctionCallback() v8go.FunctionCallback
+	GetSetIntervalFunctionCallback() v8go.FunctionCallback
 
-	sync.RWMutex
-	utils.Injector
+	GetClearTimeoutFunctionCallback() v8go.FunctionCallback
+	GetClearIntervalFunctionCallback() v8go.FunctionCallback
 }
 
-// New ...
-func New() *Timers {
-	t := new(Timers)
-	t.tt = make(map[int32]*Timer)
-
-	return t
+type timers struct {
+	Items      map[int32]*internal.Item
+	NextItemID int32
 }
 
-// Inject ...
-func (t *Timers) Inject(iso *v8.Isolate, global *v8.ObjectTemplate) error {
-	time := New()
+const initNextItemID = 1
 
-	for _, f := range []struct {
-		Name string
-		Func func() v8.FunctionCallback
-	}{
-		{"setTimeout", time.GetSetTimeoutFunctionCallback},
-		{"clearTimeout", time.GetClearTimeoutFunctionCallback},
-	} {
-		fn := v8.NewFunctionTemplate(iso, f.Func())
-
-		if err := global.Set(f.Name, fn, v8.ReadOnly); err != nil {
-			return fmt.Errorf("v8-polyfills/listener: %w", err)
-		}
+func NewTimers() Timers {
+	return &timers{
+		Items:      make(map[int32]*internal.Item),
+		NextItemID: initNextItemID,
 	}
-
-	return nil
 }
 
-// GetSetTimeoutFunctionCallback ...
-func (t *Timers) GetSetTimeoutFunctionCallback() v8.FunctionCallback {
-	return func(info *v8.FunctionCallbackInfo) *v8.Value {
+func (t *timers) GetSetTimeoutFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		ctx := info.Context()
 
-		id, err := t.startNewTimer(info.This(), info.Args())
+		id, err := t.startNewTimer(info.This(), info.Args(), false)
 		if err != nil {
-			v, err := utils.NewInt32Value(ctx, 0)
-			if err != nil {
-				return nil
-			}
-
-			return v
+			return newInt32Value(ctx, 0)
 		}
 
-		v, err := utils.NewInt32Value(ctx, id)
-		if err != nil {
-			return nil
-		}
-
-		return v
+		return newInt32Value(ctx, id)
 	}
 }
 
-// GetClearTimeoutFunctionCallback ...
-func (t *Timers) GetClearTimeoutFunctionCallback() v8.FunctionCallback {
-	return func(info *v8.FunctionCallbackInfo) *v8.Value {
+func (t *timers) GetSetIntervalFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
+		ctx := info.Context()
+
+		id, err := t.startNewTimer(info.This(), info.Args(), true)
+		if err != nil {
+			return newInt32Value(ctx, 0)
+		}
+
+		return newInt32Value(ctx, id)
+	}
+}
+
+func (t *timers) GetClearTimeoutFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		args := info.Args()
 		if len(args) > 0 && args[0].IsInt32() {
-			t.clear(args[0].Int32())
+			t.clear(args[0].Int32(), false)
 		}
 
 		return nil
 	}
 }
 
-func (t *Timers) clear(id int32) {
-	t.Lock()
-	defer t.Unlock()
+func (t *timers) GetClearIntervalFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
+		args := info.Args()
+		if len(args) > 0 && args[0].IsInt32() {
+			t.clear(args[0].Int32(), true)
+		}
 
-	if timer, ok := t.tt[id]; ok {
-		timer.Clear()
-		delete(t.tt, id)
+		return nil
 	}
 }
 
-func (t *Timers) startNewTimer(this v8.Valuer, args []*v8.Value) (int32, error) {
+func (t *timers) clear(id int32, interval bool) {
+	if id < initNextItemID {
+		return
+	}
+
+	if item, ok := t.Items[id]; ok && item.Interval == interval {
+		item.Clear()
+	}
+}
+
+func (t *timers) startNewTimer(this v8go.Valuer, args []*v8go.Value, interval bool) (int32, error) {
 	if len(args) <= 0 {
-		return 0, fmt.Errorf("1 argument required, but only 0 present")
+		return 0, errors.New("1 argument required, but only 0 present")
 	}
 
 	fn, err := args[0].AsFunction()
 	if err != nil {
 		return 0, err
 	}
-	timeout := args[1].Int32()
 
-	var restArgs []v8.Valuer
+	var delay int32
+	if len(args) > 1 && args[1].IsInt32() {
+		delay = args[1].Int32()
+	}
+	if delay < 10 {
+		delay = 10
+	}
+
+	var restArgs []v8go.Valuer
 	if len(args) > 2 {
-		restArgs = make([]v8.Valuer, 0)
+		restArgs = make([]v8go.Valuer, 0)
 		for _, arg := range args[2:] {
 			restArgs = append(restArgs, arg)
 		}
 	}
 
-	t.Lock()
-	defer t.Unlock()
+	item := &internal.Item{
+		ID:       t.NextItemID,
+		Done:     false,
+		Cleared:  false,
+		Delay:    delay,
+		Interval: interval,
+		FunctionCB: func() {
+			_, _ = fn.Call(this, restArgs...)
+		},
+		ClearCB: func(id int32) {
+			delete(t.Items, id)
+		},
+	}
 
-	t.nextTimeoutID++
-	timer := NewTimer(t.nextTimeoutID, timeout, func() { _, _ = fn.Call(this, restArgs...) })
-	t.tt[timer.ID] = timer
+	t.NextItemID++
+	t.Items[item.ID] = item
 
-	timer.Start()
+	item.Start()
 
-	return timer.ID, nil
+	return item.ID, nil
+}
+
+func newInt32Value(ctx *v8go.Context, i int32) *v8go.Value {
+	iso := ctx.Isolate()
+	v, _ := v8go.NewValue(iso, i)
+	return v
 }

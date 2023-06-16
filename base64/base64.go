@@ -1,85 +1,74 @@
 package base64
 
 import (
-	"fmt"
+	stdBase64 "encoding/base64"
 
-	b64 "encoding/base64"
-
-	v8 "github.com/nzhenev/v8go"
-	"github.com/nzhenev/v8go-polyfills-extended/utils"
+	"github.com/nzhenev/v8go"
 )
 
-// Base64 ...
-type Base64 struct {
-	utils.Injector
+type Base64 interface {
+	GetAtobFunctionCallback() v8go.FunctionCallback
+	GetBtoaFunctionCallback() v8go.FunctionCallback
 }
 
-// New ...
-func New() *Base64 {
-	return &Base64{}
+type base64 struct {
 }
 
-// GetBtoaFunctionCallback ...
-func (b *Base64) GetBtoaFunctionCallback() v8.FunctionCallback {
-	return func(info *v8.FunctionCallbackInfo) *v8.Value {
+func NewBase64() Base64 {
+	return &base64{}
+}
+
+/*
+https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/atob
+*/
+func (b *base64) GetAtobFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		args := info.Args()
 		ctx := info.Context()
 
 		if len(args) <= 0 {
-			return nil
-		}
-
-		s := args[0].String()
-		b, err := b64.StdEncoding.DecodeString(s)
-		if err != nil {
+			// TODO: v8go can't throw a error now, so we return an empty string
 			return newStringValue(ctx, "")
 		}
 
-		return newStringValue(ctx, string(b))
+		encoded := args[0].String()
+		if encoded == "" {
+			return newStringValue(ctx, "")
+		}
+		byts, err := stdBase64.RawStdEncoding.DecodeString(encoded)
+		if err != nil {
+			return newStringValue(ctx, "")
+		}
+		return newStringFromByteArray(ctx, byts)
 	}
 }
 
-// GetAtobFunctionCallback ...
-func (b *Base64) GetAtobFunctionCallback() v8.FunctionCallback {
-	return func(info *v8.FunctionCallbackInfo) *v8.Value {
+/*
+https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/btoa
+*/
+func (b *base64) GetBtoaFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		args := info.Args()
 		ctx := info.Context()
 
 		if len(args) <= 0 {
-			return nil
+			return newStringValue(ctx, "")
 		}
 
-		s := args[0].String()
-		b := b64.StdEncoding.EncodeToString([]byte(s))
-
-		return newStringValue(ctx, b)
+		str := args[0].String()
+		encoded := stdBase64.RawStdEncoding.EncodeToString([]byte(str))
+		return newStringValue(ctx, encoded)
 	}
 }
 
-// Inject ...
-func (b *Base64) Inject(iso *v8.Isolate, global *v8.ObjectTemplate) error {
-	base64 := New()
-
-	for _, f := range []struct {
-		Name string
-		Func func() v8.FunctionCallback
-	}{
-		{"btoa", base64.GetBtoaFunctionCallback},
-		{"atob", base64.GetAtobFunctionCallback},
-	} {
-		fn := v8.NewFunctionTemplate(iso, f.Func())
-
-		if err := global.Set(f.Name, fn, v8.ReadOnly); err != nil {
-			return fmt.Errorf("v8-polyfills/base64: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func newStringValue(ctx *v8.Context, str string) *v8.Value {
+func newStringValue(ctx *v8go.Context, str string) *v8go.Value {
 	iso := ctx.Isolate()
-	val, _ := v8.NewValue(iso, str)
+	val, _ := v8go.NewValue(iso, str)
+	return val
+}
 
+func newStringFromByteArray(ctx *v8go.Context, byts []byte) *v8go.Value {
+	iso := ctx.Isolate()
+	val, _ := v8go.NewStringFromByteArray(iso, byts)
 	return val
 }

@@ -23,8 +23,10 @@
 package fetch
 
 import (
+	"io"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 type UserAgentProvider interface {
@@ -38,29 +40,41 @@ func (f UserAgentProviderFunc) GetUserAgent(u *url.URL) string {
 }
 
 type Option interface {
-	apply(ft *fetcher)
+	apply(ft *Fetch)
 }
 
-type optionFunc func(ft *fetcher)
+type optionFunc func(ft *Fetch)
 
-func (f optionFunc) apply(ft *fetcher) {
+func (f optionFunc) apply(ft *Fetch) {
 	f(ft)
 }
 
 func WithLocalHandler(handler http.Handler) Option {
-	return optionFunc(func(ft *fetcher) {
+	return optionFunc(func(ft *Fetch) {
 		ft.LocalHandler = handler
 	})
 }
 
 func WithUserAgentProvider(provider UserAgentProvider) Option {
-	return optionFunc(func(ft *fetcher) {
+	return optionFunc(func(ft *Fetch) {
 		ft.UserAgentProvider = provider
 	})
 }
 
 func WithAddrLocal(addr string) Option {
-	return optionFunc(func(ft *fetcher) {
+	return optionFunc(func(ft *Fetch) {
 		ft.AddrLocal = addr
+	})
+}
+
+func WithRequestBody(body io.ReadCloser) Option {
+	return optionFunc(func(ft *Fetch) {
+		ft.InputBody = body
+	})
+}
+
+func WithResponseMap(resMap *sync.Map) Option {
+	return optionFunc(func(ft *Fetch) {
+		ft.ResponseMap = resMap
 	})
 }

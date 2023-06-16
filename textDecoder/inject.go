@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Xingwang Liao
+ * Copyright (c) 2021 Twintag
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,59 +20,20 @@
  * SOFTWARE.
  */
 
-package timers
+package textDecoder
 
 import (
-	"testing"
-	"time"
+	"fmt"
 
 	"github.com/nzhenev/v8go"
-	"github.com/nzhenev/v8go-polyfills-extended/console"
 )
 
-func Test_SetTimeout(t *testing.T) {
-	ctx, err := newV8ContextWithTimers()
-	if err != nil {
-		t.Error(err)
-		return
+func InjectWith(iso *v8go.Isolate, global *v8go.ObjectTemplate, opt ...Option) error {
+	e := NewDecode(opt...)
+	decodeFnTmp := v8go.NewFunctionTemplate(iso, e.TextDecoderFunctionCallback())
+	if err := global.Set("TextDecoder", decodeFnTmp); err != nil {
+		return fmt.Errorf("v8go-polyfills/textDecoder global.set: %w", err)
 	}
 
-	if err := console.InjectTo(ctx); err != nil {
-		t.Error(err)
-		return
-	}
-
-	val, err := ctx.RunScript(`
-	console.log(new Date().toUTCString());
-
-	setTimeout(function() {
-		console.log("Hello v8go.");
-		console.log(new Date().toUTCString());
-	}, 2000)`, "set_timeout.js")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if !val.IsInt32() {
-		t.Errorf("except 1 but got %v", val)
-		return
-	}
-
-	if id := val.Int32(); id != 1 {
-		t.Errorf("except 1 but got %d", id)
-	}
-
-	time.Sleep(time.Second * 6)
-}
-
-func newV8ContextWithTimers() (*v8go.Context, error) {
-	iso := v8go.NewIsolate()
-	global := v8go.NewObjectTemplate(iso)
-
-	if err := InjectTo(iso, global); err != nil {
-		return nil, err
-	}
-
-	return v8go.NewContext(iso, global), nil
+	return nil
 }

@@ -1,85 +1,42 @@
 package console
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 
-	v8 "github.com/nzhenev/v8go"
+	"github.com/nzhenev/v8go"
 )
 
-// Option ...
-type Option func(*Console)
-
-// WithOutput ...
-func WithOutput(output io.Writer) Option {
-	return func(c *Console) {
-		c.out = output
-	}
+type Console interface {
+	GetLogFunctionCallback() v8go.FunctionCallback
 }
 
-// Console ...
-type Console struct {
-	out        io.Writer
-	methodName string
+type console struct {
+	Output io.Writer
 }
 
-// AddTo ...
-func AddTo(ctx *v8.Context, opt ...Option) error {
-	if ctx == nil {
-		return errors.New("v8-polyfills/console: ctx is required")
+func NewConsole(opt ...Option) Console {
+	c := &console{
+		Output: os.Stdout,
 	}
-
-	c := New(opt...)
-
-	iso := ctx.Isolate()
-	con := v8.NewObjectTemplate(iso)
-
-	logFn := v8.NewFunctionTemplate(iso, c.GetFunctionCallback())
-
-	if err := con.Set(c.methodName, logFn, v8.ReadOnly); err != nil {
-		return fmt.Errorf("v8-polyfills/console: %w", err)
-	}
-
-	conObj, err := con.NewInstance(ctx)
-	if err != nil {
-		return fmt.Errorf("v8-polyfills/console: %w", err)
-	}
-
-	global := ctx.Global()
-
-	if err := global.Set("console", conObj); err != nil {
-		return fmt.Errorf("v8-polyfills/console: %w", err)
-	}
-
-	return nil
-}
-
-// New ...
-func New(opt ...Option) *Console {
-	c := new(Console)
-
-	c.out = os.Stdout
-	c.methodName = "log"
 
 	for _, o := range opt {
-		o(c)
+		o.apply(c)
 	}
 
 	return c
 }
 
-// GetFunctionCallback ...
-func (c *Console) GetFunctionCallback() v8.FunctionCallback {
-	return func(info *v8.FunctionCallbackInfo) *v8.Value {
+func (c *console) GetLogFunctionCallback() v8go.FunctionCallback {
+	return func(info *v8go.FunctionCallbackInfo) *v8go.Value {
 		if args := info.Args(); len(args) > 0 {
 			inputs := make([]interface{}, len(args))
 			for i, input := range args {
 				inputs[i] = input
 			}
 
-			fmt.Fprintln(c.out, inputs...)
+			fmt.Fprintln(c.Output, inputs...)
 		}
 
 		return nil

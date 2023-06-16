@@ -20,59 +20,29 @@
  * SOFTWARE.
  */
 
-package timers
+package base64
 
 import (
-	"testing"
-	"time"
+	"fmt"
 
 	"github.com/nzhenev/v8go"
-	"github.com/nzhenev/v8go-polyfills-extended/console"
 )
 
-func Test_SetTimeout(t *testing.T) {
-	ctx, err := newV8ContextWithTimers()
-	if err != nil {
-		t.Error(err)
-		return
+func InjectTo(iso *v8go.Isolate, global *v8go.ObjectTemplate) error {
+	b := NewBase64()
+
+	for _, f := range []struct {
+		Name string
+		Func func() v8go.FunctionCallback
+	}{
+		{Name: "atob", Func: b.GetAtobFunctionCallback},
+		{Name: "btoa", Func: b.GetBtoaFunctionCallback},
+	} {
+		fn := v8go.NewFunctionTemplate(iso, f.Func())
+		if err := global.Set(f.Name, fn, v8go.ReadOnly); err != nil {
+			return fmt.Errorf("v8go-polyfills/fetch: %w", err)
+		}
 	}
 
-	if err := console.InjectTo(ctx); err != nil {
-		t.Error(err)
-		return
-	}
-
-	val, err := ctx.RunScript(`
-	console.log(new Date().toUTCString());
-
-	setTimeout(function() {
-		console.log("Hello v8go.");
-		console.log(new Date().toUTCString());
-	}, 2000)`, "set_timeout.js")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if !val.IsInt32() {
-		t.Errorf("except 1 but got %v", val)
-		return
-	}
-
-	if id := val.Int32(); id != 1 {
-		t.Errorf("except 1 but got %d", id)
-	}
-
-	time.Sleep(time.Second * 6)
-}
-
-func newV8ContextWithTimers() (*v8go.Context, error) {
-	iso := v8go.NewIsolate()
-	global := v8go.NewObjectTemplate(iso)
-
-	if err := InjectTo(iso, global); err != nil {
-		return nil, err
-	}
-
-	return v8go.NewContext(iso, global), nil
+	return nil
 }

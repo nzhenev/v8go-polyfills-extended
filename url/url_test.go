@@ -20,59 +20,32 @@
  * SOFTWARE.
  */
 
-package timers
+package url
 
 import (
 	"testing"
-	"time"
 
 	"github.com/nzhenev/v8go"
-	"github.com/nzhenev/v8go-polyfills-extended/console"
 )
 
-func Test_SetTimeout(t *testing.T) {
-	ctx, err := newV8ContextWithTimers()
-	if err != nil {
-		t.Error(err)
-		return
+func TestInject(t *testing.T) {
+	t.Parallel()
+
+	ctx := v8go.NewContext()
+
+	if err := InjectTo(ctx); err != nil {
+		t.Errorf("inject url polyfill: %v", err)
 	}
 
-	if err := console.InjectTo(ctx); err != nil {
-		t.Error(err)
-		return
+	if val, _ := ctx.RunScript("typeof URL", ""); val.String() != "function" {
+		t.Error("inject URL failed")
 	}
 
-	val, err := ctx.RunScript(`
-	console.log(new Date().toUTCString());
-
-	setTimeout(function() {
-		console.log("Hello v8go.");
-		console.log(new Date().toUTCString());
-	}, 2000)`, "set_timeout.js")
-	if err != nil {
-		t.Error(err)
-		return
+	if val, _ := ctx.RunScript("typeof URLSearchParams", ""); val.String() != "function" {
+		t.Error("inject URLSearchParams failed")
 	}
 
-	if !val.IsInt32() {
-		t.Errorf("except 1 but got %v", val)
-		return
+	if val, _ := ctx.RunScript("new URLSearchParams('?a=1').get('a')", ""); val.String() != "1" {
+		t.Error("test URLSearchParams failed")
 	}
-
-	if id := val.Int32(); id != 1 {
-		t.Errorf("except 1 but got %d", id)
-	}
-
-	time.Sleep(time.Second * 6)
-}
-
-func newV8ContextWithTimers() (*v8go.Context, error) {
-	iso := v8go.NewIsolate()
-	global := v8go.NewObjectTemplate(iso)
-
-	if err := InjectTo(iso, global); err != nil {
-		return nil, err
-	}
-
-	return v8go.NewContext(iso, global), nil
 }

@@ -24,11 +24,16 @@ package fetch
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/nzhenev/v8go"
+	"github.com/nzhenev/v8go-polyfills-extended/console"
+	"github.com/nzhenev/v8go-polyfills-extended/uuid"
 )
 
 func TestNewFetcher(t *testing.T) {
@@ -152,4 +157,134 @@ func newV8ContextWithFetch(opt ...Option) (*v8go.Context, error) {
 	}
 
 	return v8go.NewContext(iso, global), nil
+}
+
+func testFetchBodyWithLazyLoad(t *testing.T, script string) {
+
+	iso := v8go.NewIsolate()
+	defer iso.Dispose()
+	global := v8go.NewObjectTemplate(iso)
+
+	fetcher := NewFetcher()
+	if err := InjectWithFetcherTo(iso, global, fetcher); err != nil {
+		t.Error(err)
+		return
+	}
+
+	ctx := v8go.NewContext(iso, global)
+	if err := console.InjectTo(ctx); err != nil {
+		panic(err)
+	}
+	if err := InjectHTTPProperties(ctx); err != nil {
+		panic(err)
+	}
+
+	fn := `function Response(body, init){
+		console.log("Response >> "+body)
+		if(init == null || init == undefined){
+			init =  { "status": 200, "statusText": "OK" }
+		}
+		if(body == null || body == undefined){
+			this.body = ''
+		}else if (body.body){
+			this.body = body.body
+		}else{
+			this.body = body
+		}
+		this.status = init.status
+		this.statusText = init.statusText
+		this.headers = init.headers
+	}
+	` + script + `
+	let res = epsilon();
+	Promise.resolve(res)
+	`
+
+	//fmt.Println(fn)
+	val, err := ctx.RunScript(fn, "fetch_json.js")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	proms, err := val.AsPromise()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for proms.State() == v8go.Pending {
+		continue
+	}
+
+	res, err := proms.Result().AsObject()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	status, err := res.Get("status")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println("status : ", status.String())
+
+	body, err := res.Get("body")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println("body : ", body.String())
+	if uuid.IsUUID(body.String()) {
+		val, ok := fetcher.ResponseMap.Load(body.String())
+		if ok {
+			result := val.(io.ReadCloser)
+			defer result.Close()
+			bodyBytes, err := ioutil.ReadAll(result)
+			if err != nil {
+				t.Error(fmt.Errorf("Error while getting status of epsilon execution : %#v", err))
+				return
+			}
+			fmt.Printf("status %s, bodyBytes %s", status.String(), string(bodyBytes))
+			return
+		}
+	}
+	fmt.Printf("status %s, body %s", status.String(), body.String())
+
+}
+
+func TestMultipleFetchWithSequentialResponseConsumptionInJS(t *testing.T) {
+	addr := "localhost:10000"
+	go StartHttpServer(addr)
+	time.Sleep(time.Second * 5)
+
+	testFetchBodyWithLazyLoad(t, `epsilon = async (event) => {
+			const url = 'http://127.0.0.1:10000/'
+			let resp = await fetch(url)
+			let out = await resp.text()
+			console.log(">> "+out)
+			const url1 = 'http://127.0.0.1:10000/public'
+			let resp1 = await fetch(url1)
+			//let resp1text = await resp1.text()
+			//console.log(">> "+resp1text)
+			//multiple fetch with all response consumed multiple times in script
+			return new Response(resp1)
+		}`)
+
+	time.Sleep(time.Second * 5)
+	testFetchBodyWithLazyLoad(t, `epsilon = async (event) => {
+			const url = 'http://127.0.0.1:10000/'
+			let resp = await fetch(url)
+
+			const url1 = 'http://127.0.0.1:10000/public'
+			let resp1 = await fetch(url1)
+
+			//multiple fetch with all response consumed multiple times in script
+			return new Response(resp)
+		}`)
+	// es.Expectf(err == nil, "Error %#v", err)
+	// es.Expectf(resp != nil, "expected not nil")
+	// es.Expectf(strings.ToLower(resp.Status) == "200", "unexpected status %q", resp.Status)
+	// es.Expectf(strings.ToLower(resp.Body) == "home page", "unexpected status %q", resp.Body)
 }
